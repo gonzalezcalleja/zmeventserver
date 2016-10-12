@@ -71,6 +71,7 @@ use constant SSL_KEY_FILE=>'/etc/apache2/ssl/zoneminder.key';
 # if you only want to enable websockets make both of these 0
 
 my $usePushProxy = 1;               # set this to 1 to use a remote push proxy for APNS that I have set up for zmNinja users
+my $useMQTTServer = 1;              # set this to 1 to publish events on a MQTT Server
 
 my $usePushAPNSDirect = 0;          # set this to 1 if you have an APNS SSL certificate/key pair
                         # the only way to have this is if you have an apple developer
@@ -124,6 +125,8 @@ use constant VALID_WEBSOCKET => '0';
 my $alarmEventId = 1;           # tags the event id along with the alarm - useful for correlation
                     # only for geeks though - most people won't give a damn. I do.
 
+my $mqttServer = '127.0.0.1';
+
 if (!try_use ("Net::WebSocket::Server")) {Fatal ("Net::WebSocket::Server missing");exit (-1);}
 if (!try_use ("IO::Socket::SSL")) {Fatal ("IO::Socket::SSL  missing");exit (-1);}
 if (!try_use ("Crypt::MySQL qw(password password41)")) {Fatal ("Crypt::MySQL  missing");exit (-1);}
@@ -175,6 +178,10 @@ else
     Info ("direct APNS disabled");
 }
 
+if ($useMQTTServer) 
+{
+    if (!try_use ("Net::MQTT::Simple")) {Fatal ("Net::MQTT::Simple  missing");exit (-1);}
+}
 
 
 
@@ -524,6 +531,25 @@ sub sendOverPushProxy
     {
         Info("Push Proxy push message Error:".$res->status_line);
     }
+}
+
+# Sends a push notification to the mqtt Broker
+sub sendOverMQTTBroker
+{
+    
+    my ($header, $mid) = @_;
+    my $json;
+
+    $json = encode_json ({
+                monitor=> $mid,
+                name=>$header,
+            });
+
+    Debug ("Final JSON being sent is: $json");
+
+    my $mqtt = Net::MQTT::Simple->new($mqttServer);
+
+    $mqtt->publish(join('', 'zoneminder/', $mid) => $json);
 }
 
 
@@ -1133,6 +1159,11 @@ sub initSocketServer
             my $ac = scalar @active_connections;
             if (checkEvents())
             {
+                if ($useMQTTServer) {
+                    Info ("Sending notification over MQTT");
+                    sendOverMQTTBroker($alarm_header, $alarm_mid);
+                }
+
                 Info ("Broadcasting new events to all $ac websocket clients\n");
                     my ($serv) = @_;
                     my $i = 0;
@@ -1237,13 +1268,8 @@ sub initSocketServer
                                     $_->{pending} = INVALID_WEBSOCKET;
                                 }
                             }
-                        }
-                        
-
-                        
+                        }                        
                     }
-
-
             }
         },
         # called when a new connection comes in
