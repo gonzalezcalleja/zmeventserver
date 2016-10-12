@@ -542,13 +542,14 @@ sub sendOverMQTTBroker
     $json = encode_json ({
                 monitor=> $mid,
                 name=>$header,
+                state => 'alarm',
             });
 
     Debug ("Final JSON being sent is: $json");
 
     my $mqtt = Net::MQTT::Simple->new($mqttServer);
 
-    $mqtt->publish('zoneminder' => $json);
+    $mqtt->publish(join('/','zoneminder',$mid) => $json);
 }
 
 
