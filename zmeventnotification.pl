@@ -518,9 +518,8 @@ sub sendOverPushProxy
     #print "Sending:$json\n";
     Debug ("Final JSON being sent is: $json");
     my $req = HTTP::Request->new ('POST', $uri);
-    $req->header( 'Content-Type' => 'application/json', 'X-AN-APP-NAME'=> PUSHPROXY_APP_NAME, 'X-AN-APP-KEY'=> PUSHPROXY_APP_ID
-     );
-     $req->content($json);
+    $req->header( 'Content-Type' => 'application/json', 'X-AN-APP-NAME'=> PUSHPROXY_APP_NAME, 'X-AN-APP-KEY'=> PUSHPROXY_APP_ID);
+    $req->content($json);
     my $lwp = LWP::UserAgent->new(%ssl_push_opts);
     my $res = $lwp->request( $req );
     if ($res->is_success)
@@ -549,7 +548,7 @@ sub sendOverMQTTBroker
 
     my $mqtt = Net::MQTT::Simple->new($mqttServer);
 
-    $mqtt->publish(join('', 'zoneminder/', $mid) => $json);
+    $mqtt->publish('zoneminder' => $json);
 }
 
 
