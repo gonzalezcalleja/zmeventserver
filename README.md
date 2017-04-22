@@ -1,4 +1,4 @@
-###### Latest Version: 0.92
+###### Latest Version: 0.93
 
 ### What is it?
 A WSS (Secure Web Sockets) based event notification server that broadcasts new events to any authenticated listeners.
@@ -14,11 +14,11 @@ You can implement your own receiver to get real time event notification and do w
 * People developing extensions to work with ZoneMinder for Home Automation needs will benefit from a clean interface
 * Receivers don't poll. They keep a web socket open and when there are events, they get a notification
 
-###Is this officially developed by ZM developers?
+### Is this officially developed by ZM developers?
 No. I developed it for zmNinja, but you can use it with your own consumer.
 
 
-###How do I install it?
+### How do I install it?
 
 * Make sure all the dependencies are installed ([see here](https://github.com/pliablepixels/zmeventserver#installing-dependencies))
 * [Download the server](https://raw.githubusercontent.com/pliablepixels/zmeventserver/master/zmeventnotification.pl) (its a simple perl file) and place it in the same place other ZM scripts are stored (example ``/usr/bin``). Make sure you do a `chmod a+x` on it.
@@ -27,8 +27,10 @@ No. I developed it for zmNinja, but you can use it with your own consumer.
 and restarted if it crashes)
 * Its is HIGHLY RECOMMENDED that you first start the event server manually from terminal, ensure you inspect syslog to validate all logs are correct and THEN make it a daemon in ZoneMinder. If you don't, it will be hard to know what is going wrong. See the [debugging](https://github.com/pliablepixels/zmeventserver#debugging-and-reporting-problems) section later that describes how to make sure its all working fine from command line.
 
-####Installing Dependencies
+#### Installing Dependencies
 The following perl packages need to be added (these are for Ubuntu - if you are on a different OS, you'll have to figure out which packages are needed - I don't know what they might be)
+
+(**General note** - some users may face issues installing dependencies via `perl -MCPAN -e "Module::Name"`. If so, its usually more reliable to get into the CPAN shell and install it from the shell as a 2 step process. You'd do that using `sudo perl -MCPAN -e shell` and then whilst inside the shell, `install Module::Name`)
  
 * Crypt::MySQL
 * Net::WebSocket::Server
@@ -61,10 +63,10 @@ Get HTTPS library for LWP:
 perl -MCPAN -e "install LWP::Protocol::https"
 ```
 
-####Making sure everything is running
+#### Making sure everything is running
 * Start the event server manually first using `sudo /usr/bin/zmeventnotification.pl` and make sure you check syslogs to ensure its loaded up and all dependencies are found. If you see errors, fix them. Then exit and follow the steps below to start it along with Zoneminder
 
-####How do I run it as a daemon so it starts automatically along with ZoneMinder?
+#### How do I run it as a daemon so it starts automatically along with ZoneMinder?
 
 **WARNING: Do NOT do this before you run it manually as I've mentioned above to test. Make sure it works, all packages are present etc. before you 
 add it as  a daemon as if you don't and it crashes you won't know why**
@@ -100,7 +102,7 @@ Fear not. You just need to redo the changes you did to ``zmpkg.pl`` and ``zmdc.p
 
 
 
-###SSL certificate
+### SSL certificate
 
 If you are using secure mode (default) you **also need to make sure you generate SSL certificates otherwise the script won't run**
 If you are using SSL for ZoneMinder, simply point this script to the certificates.
@@ -110,11 +112,9 @@ easy as:
 
 (replace /etc/apache2/ssl/ with the directory you want the certificate and key files to be stored in)
 ```
-sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/apache2/ssl/zoneminder.key -out /etc/apache2/ssl/zoneminder.crt
+sudo openssl req -x509 -nodes -days 4096 -newkey rsa:2048 -keyout /etc/apache2/ssl/zoneminder.key -out /etc/apache2/ssl/zoneminder.crt
 ```
 It's **very important** to ensure the "Common Name" selected while generating the certificate is the same as the hostname or IP of the server. For example if you plan to access the server as "myserver.ddns.net" Please make sure you use myserver.ddns.net as the common name. If you are planning to access it via IP, please make sure you use the same IP.
-
-Once that certificate is done, you also need to install it on your phone - thats as simple as emailing yourself the ".crt" file and double tapping it to install it.
 
 Once you do that please change the following lines in the perl server to point to your SSL certs/keys:
 ```
@@ -122,20 +122,24 @@ use constant SSL_CERT_FILE=>'/etc/apache2/ssl/zoneminder.crt';
 use constant SSL_KEY_FILE=>'/etc/apache2/ssl/zoneminder.key';
 ```
 
-###Troubleshooting
+#### IOS Users 
+Starting IOS 10.2, I noticed that zmNinja was not able to register with the event server when it was using WSS (`$useSecure=1`) and self-signed certificates. To solve this, I had to email myself the zoneminder certificate (`zoneminder.crt`) file and install it in the phone. Why that is needed only for WSS and not for HTTPS is a mystery to me. The alternative is to run the eventserver in WS mode (`$useSecure=0`).
+
+
+### Troubleshooting
 
 * If it runs fine when you run it from command line, but keeps exiting when run as a daemon:
   - Make sure the file where you store tokens (`/etc/private/tokens.txt or whatever you have used`) is not RW Root only. It needs to be RW `www-data` for Ubuntu/Debian or `apache` for Fedora/CentOS
   - Make sure your certificates are readable by `www-data` for Ubuntu/Debian, or `apache` for Fedora/CentOS (thanks to [@jagee](https://github.com/pliablepixels/zmeventserver/issues/8)) 
 
 
-###How do I disable secure mode?
+### How do I disable secure mode?
 
 As of 0.6, I've added an option to run the server using unsecure websockets (WS instead of WSS).
 As it turns out many folks run ZM inside the LAN only and don't want to deal with certificates. Fair enough.
 For that situation, edit zmeventnotification.pl and change $useSecure to 0 (around line 64)
 
-###Debugging and reporting problems
+### Debugging and reporting problems
 There could be several reasons why you may not be receiving notifications:
 * Your event server is not running
 * Your app is not able to reach the server
@@ -191,9 +195,9 @@ Oct 20 10:28:56 homeserver zmeventnotification[27789]: INF [Pushproxy push messa
 
 
 
-###============ For Developers writing their own consumers============
+### For Developers writing their own consumers
 
-###How do I talk to it?
+### How do I talk to it?
 *  ``{"JSON":"everywhere"}``
 * Your client sends messages (authentication) over JSON
 * The server sends auth success/failure over JSON back at you
@@ -212,7 +216,7 @@ Oct 20 10:28:56 homeserver zmeventnotification[27789]: INF [Pushproxy push messa
 #### 1. Authentication messages
 
 To connect with the server you need to send the following JSON object (replace username/password)
-Note this is encrypted
+Note this payload is NOT encrypted. If you are not using SSL, it will be sent in clear.
 
 Authentication messages can be sent multiple times. It is necessary that you send the first one
 within 20 seconds of opening a connection or the server will terminate your connection.
@@ -406,10 +410,10 @@ Next up, you need to make the following changes to the Event Server script:
 * Restart the Event Server
 
 
-###How scalable is it?
+### How scalable is it?
 It's a lightweight single threaded process. I really don't see a need for launching a zillion threads or a process per monitor etc for what it does. I'd argue its simplicity is its scalability. Plus I don't expect more than a handful of consumers to connect to it. I really don't see why it won't be able to scale to for what is does. But if you are facing scalability issues, let me know. There is [Mojolicious](http://mojolicio.us/) I can use to make it more scalable if I am proven wrong about scalability.
 
-###Brickbats
+### Brickbats
 
 **Why not just supply the username and password in the URL as a resource? It's over TLS**
 
